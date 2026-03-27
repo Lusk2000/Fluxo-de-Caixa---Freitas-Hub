@@ -20,6 +20,7 @@ import { Session } from '@supabase/supabase-js';
 // Types
 interface CashFlowEntry {
   id: string;
+  user_id?: string;
   date: string;
   project: string;
   service: string;
@@ -69,8 +70,7 @@ export default function App() {
   }, [session]);
 
   const fetchEntries = async () => {
-    if (!isSupabaseConfigured) {
-      console.warn('Supabase is not configured. Please set VITE_SUPABASE_ANON_KEY.');
+    if (!isSupabaseConfigured || !session?.user?.id) {
       setIsLoading(false);
       return;
     }
@@ -79,6 +79,7 @@ export default function App() {
       const { data, error } = await supabase
         .from('cash_flow')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('date', { ascending: true });
 
       if (error) throw error;
@@ -170,6 +171,7 @@ export default function App() {
     setIsSubmitting(true);
 
     const entryToInsert = {
+      user_id: session?.user?.id,
       date: newEntry.date || getTodayLocal(),
       project: newEntry.project.trim(),
       service: newEntry.service.trim(),
@@ -222,7 +224,8 @@ export default function App() {
       const { error } = await supabase
         .from('cash_flow')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', session?.user?.id);
 
       if (error) throw error;
       
